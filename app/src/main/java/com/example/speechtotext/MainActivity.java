@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
         saveSwitch = (Switch) findViewById(R.id.saveTextSwitch);
 
 
-        recordButton.setText("Click and Start Talking");
+        recordButton.setText("Click and Start Talking");//
 
 
         recordButton.setOnClickListener(new View.OnClickListener() {
