@@ -1,35 +1,21 @@
 package com.example.speechtotext;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.provider.Settings;
 import android.speech.RecognizerIntent;
-import android.util.Log;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.FileNotFoundException;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -129,24 +115,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    Handler returnMsgHandler = new Handler() {
-        public void handleMessage(Message msg) {
+    Handler returnMsgHandler = new Handler(new Handler.Callback() {
+        public boolean handleMessage(Message msg) {
             if(msg.what == WRITE_TO_FILE)
             {
                 if(saveSwitch.isChecked())
                 {
                     try {
-                        FileOutputStream fileOutputStream = openFileOutput(
-                                "conversion.txt", MODE_PRIVATE);
-                        fileOutputStream.write(msg.obj.toString().getBytes());
-                        fileOutputStream.close();
-                    }
-                    catch(IOException e)
-                    {
+                        File resultsFile = File.createTempFile("stt", ".txt", getExternalFilesDir(null));
+                        FileOutputStream outputStream = new FileOutputStream(resultsFile, true);
+                        outputStream.write(msg.obj.toString().getBytes());
+                        outputStream.flush();
+                        outputStream.close();
+
+                    } catch (IOException e) {
                         e.printStackTrace();
                     }
+
+
                 }
             }
+            return false;
         }
-    };
+    });
 }
