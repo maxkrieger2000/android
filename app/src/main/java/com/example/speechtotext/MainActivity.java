@@ -23,6 +23,8 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String FILE_PREFIX = "stt";
+    private static final String FILE_SUFFIX = ".txt";
     private Button recordButton;
     private TextView speechOutput;
     private Switch saveSwitch;
@@ -122,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
                 if(saveSwitch.isChecked())
                 {
                     try {
-                        File resultsFile = File.createTempFile("stt", ".txt", getExternalFilesDir(null));
+                        File resultsFile = File.createTempFile(FILE_PREFIX, FILE_SUFFIX, getExternalFilesDir(null));
                         FileOutputStream outputStream = new FileOutputStream(resultsFile, true);
                         outputStream.write(msg.obj.toString().getBytes());
                         outputStream.flush();
