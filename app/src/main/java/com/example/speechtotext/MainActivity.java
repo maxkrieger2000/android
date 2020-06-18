@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.speech.RecognizerIntent;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Switch;
@@ -23,6 +24,7 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "MainActivity";
     private static final String FILE_PREFIX = "stt";
     private static final String FILE_SUFFIX = ".txt";
     private Button recordButton;
@@ -131,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
                         outputStream.close();
 
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        Log.w(TAG, e);
                     }
 
 
