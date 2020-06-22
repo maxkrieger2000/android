@@ -15,7 +15,7 @@ def main():
     else:
         return
 
-    if results != 0 && results.reason == speechsdk.ResultReason.RecognizedSpeech:
+    if results != 0 and results.reason == speechsdk.ResultReason.RecognizedSpeech:
         saveResults = input("save answer to file? (Y/N): ")
         if(saveResults == "Y"):
             saveFile = open(str(uuid.uuid1()) + ".txt", "w")
@@ -70,6 +70,7 @@ def speech_from_file():
         if cancellation_details.reason == speechsdk.CancellationReason.Error:
             print("Error details: {}".format(cancellation_details.error_details))
     return result
+
 
 if __name__ == "__main__":
     main()
