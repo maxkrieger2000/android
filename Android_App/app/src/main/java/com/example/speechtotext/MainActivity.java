@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -16,11 +17,19 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.microsoft.cognitiveservices.speech.CancellationDetails;
+import com.microsoft.cognitiveservices.speech.ResultReason;
+import com.microsoft.cognitiveservices.speech.SpeechConfig;
+import com.microsoft.cognitiveservices.speech.SpeechRecognitionResult;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -28,10 +37,13 @@ public class MainActivity extends AppCompatActivity {
     private static final String FILE_PREFIX = "stt";
     private static final String FILE_SUFFIX = ".txt";
     private Button recordButton;
+    private Switch azureSwitch;
     private TextView speechOutput;
     private Switch saveSwitch;
     private static final int WRITE_TO_FILE = 1;
     private static final int VOICE_RECOGNITION_CODE = 100;
+    private static final URI SERVICE_HOST = URI.create("ws://localhost:5000");
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
         recordButton = (Button) findViewById(R.id.recordVoiceBtn);
         speechOutput = (TextView) findViewById(R.id.textOutput);
         saveSwitch = (Switch) findViewById(R.id.saveTextSwitch);
+        azureSwitch = (Switch) findViewById(R.id.azureSwitch);
 
 
         recordButton.setText("Click and Start Talking");//
@@ -50,22 +63,74 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onClick(View v) {
+                if(azureSwitch.isChecked())
+                {
+                    //run speech to text through azure service
+                    SpeechConfig configSpeech = SpeechConfig.fromHost(SERVICE_HOST);
+                    com.microsoft.cognitiveservices.speech.SpeechRecognizer azureRecognizer =
+                            new com.microsoft.cognitiveservices.speech.SpeechRecognizer(configSpeech);
+                    Future<SpeechRecognitionResult> azureFuture = azureRecognizer.recognizeOnceAsync();
+
+                    String waitMessage = "Please wait for the speech to be processed";
+                    Toast.makeText(
+                            getBaseContext(), waitMessage, Toast.LENGTH_SHORT).show();
+
+                    while(!azureFuture.isDone())
+                    {
+                        Handler handler = new Handler();
+                        handler.postDelayed(new Runnable() {
+                            public void run() {
+                                String waitMessage = "Please wait for the speech to be processed";
+                                Toast.makeText(
+                                        getApplicationContext(), waitMessage, Toast.LENGTH_SHORT).show();
+                            }
+                        }, 2000);
+                    }
+
+                    SpeechRecognitionResult azureResult;
+                    try {
+                        azureResult = azureFuture.get();
+                        if(azureResult.getReason() == ResultReason.RecognizedSpeech)
+                        {
+                            speechOutput.setText(azureResult.getText());
+                        }
+                        else if(azureResult.getReason() == ResultReason.NoMatch)
+                        {
+                            String noMatchMessage = "No Speech Recognized";
+                            Toast.makeText(getApplicationContext(), noMatchMessage, Toast.LENGTH_SHORT).show();
+                        }
+                        else if(azureResult.getReason() == ResultReason.Canceled)
+                        {
+                            CancellationDetails cancelDetails = CancellationDetails.fromResult(azureResult);
+
+                            Log.w(TAG, String.valueOf(cancelDetails.getReason()));
+                        }
+                    } catch (ExecutionException e) {
+                        Log.w(TAG, e);
+                    } catch (InterruptedException e) {
+                        Log.w(TAG, e);
+                    }
 
 
-                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-                intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak");
-                try{
-                    startActivityForResult(intent, VOICE_RECOGNITION_CODE);
 
 
-
-                } catch (ActivityNotFoundException e) {
-                    Toast.makeText(getApplicationContext(), "Device Not Supported",
-                            Toast.LENGTH_SHORT).show();
                 }
+                else{
+                    Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+                    intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak");
+                    try {
+                        startActivityForResult(intent, VOICE_RECOGNITION_CODE);
+
+
+                    } catch (ActivityNotFoundException e) {
+                        Toast.makeText(getApplicationContext(), "Device Not Supported",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                }
+
 
 
             }
