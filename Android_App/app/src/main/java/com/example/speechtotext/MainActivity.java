@@ -1,10 +1,13 @@
 package com.example.speechtotext;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -55,9 +58,13 @@ public class MainActivity extends AppCompatActivity {
         saveSwitch = (Switch) findViewById(R.id.saveTextSwitch);
         azureSwitch = (Switch) findViewById(R.id.azureSwitch);
 
+        String initialButtonText = "Click and Start Talking";
+        recordButton.setText(initialButtonText);//
 
-        recordButton.setText("Click and Start Talking");//
-
+        if(!isRecordPermissionGranted())
+        {
+            requestRecordPermission();
+        }
 
         recordButton.setOnClickListener(new View.OnClickListener() {
 
@@ -71,18 +78,18 @@ public class MainActivity extends AppCompatActivity {
                             new com.microsoft.cognitiveservices.speech.SpeechRecognizer(configSpeech);
                     Future<SpeechRecognitionResult> azureFuture = azureRecognizer.recognizeOnceAsync();
 
-                    String waitMessage = "Please wait for the speech to be processed";
-                    Toast.makeText(
-                            getBaseContext(), waitMessage, Toast.LENGTH_SHORT).show();
+                    //String waitMessage = "Please wait for the speech to be processed";
+                    //Toast.makeText(
+                    //        getBaseContext(), waitMessage, Toast.LENGTH_SHORT).show();
 
                     while(!azureFuture.isDone())
                     {
                         Handler handler = new Handler();
                         handler.postDelayed(new Runnable() {
                             public void run() {
-                                String waitMessage = "Please wait for the speech to be processed";
-                                Toast.makeText(
-                                        getApplicationContext(), waitMessage, Toast.LENGTH_SHORT).show();
+                                //String waitMessage = "Please wait for the speech to be processed";
+                                //Toast.makeText(
+                                //        getApplicationContext(), waitMessage, Toast.LENGTH_SHORT).show();
                             }
                         }, 2000);
                     }
@@ -93,6 +100,11 @@ public class MainActivity extends AppCompatActivity {
                         if(azureResult.getReason() == ResultReason.RecognizedSpeech)
                         {
                             speechOutput.setText(azureResult.getText());
+                            Message msg = Message.obtain();
+                            msg.what = WRITE_TO_FILE;
+                            msg.obj = azureResult.getText();
+                            returnMsgHandler.sendMessage(msg);
+
                         }
                         else if(azureResult.getReason() == ResultReason.NoMatch)
                         {
@@ -105,13 +117,9 @@ public class MainActivity extends AppCompatActivity {
 
                             Log.w(TAG, String.valueOf(cancelDetails.getReason()));
                         }
-                    } catch (ExecutionException e) {
-                        Log.w(TAG, e);
-                    } catch (InterruptedException e) {
+                    } catch (ExecutionException | InterruptedException e) {
                         Log.w(TAG, e);
                     }
-
-
 
 
                 }
@@ -207,4 +215,15 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
     });
+
+    private boolean isRecordPermissionGranted() {
+        return (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED);
+    }
+
+    private void requestRecordPermission(){
+        ActivityCompat.requestPermissions(
+                this, new String[]{Manifest.permission.RECORD_AUDIO}, 0);
+    }
+
 }
