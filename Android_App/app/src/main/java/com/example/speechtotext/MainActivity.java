@@ -12,7 +12,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -24,6 +23,8 @@ import com.microsoft.cognitiveservices.speech.CancellationDetails;
 import com.microsoft.cognitiveservices.speech.ResultReason;
 import com.microsoft.cognitiveservices.speech.SpeechConfig;
 import com.microsoft.cognitiveservices.speech.SpeechRecognitionResult;
+import com.microsoft.cognitiveservices.speech.SpeechRecognizer;
+
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -61,8 +62,7 @@ public class MainActivity extends AppCompatActivity {
         String initialButtonText = "Click and Start Talking";
         recordButton.setText(initialButtonText);//
 
-        if(!isRecordPermissionGranted())
-        {
+        if(!isRecordPermissionGranted()) {
             requestRecordPermission();
         }
 
@@ -70,21 +70,19 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onClick(View v) {
-                if(azureSwitch.isChecked())
-                {
+                if (azureSwitch.isChecked()) {
                     //run speech to text through azure service
                     SpeechConfig configSpeech = SpeechConfig.fromHost(SERVICE_HOST);
-                    com.microsoft.cognitiveservices.speech.SpeechRecognizer azureRecognizer =
-                            new com.microsoft.cognitiveservices.speech.SpeechRecognizer(configSpeech);
+                    SpeechRecognizer azureRecognizer = new SpeechRecognizer(configSpeech);
                     Future<SpeechRecognitionResult> azureFuture = azureRecognizer.recognizeOnceAsync();
 
                     //String waitMessage = "Please wait for the speech to be processed";
                     //Toast.makeText(
                     //        getBaseContext(), waitMessage, Toast.LENGTH_SHORT).show();
 
-                    while(!azureFuture.isDone())
-                    {
-                        Handler handler = new Handler();
+
+                    Handler handler = new Handler();
+                    while(!azureFuture.isDone()) {
                         handler.postDelayed(new Runnable() {
                             public void run() {
                                 //String waitMessage = "Please wait for the speech to be processed";
@@ -97,8 +95,7 @@ public class MainActivity extends AppCompatActivity {
                     SpeechRecognitionResult azureResult;
                     try {
                         azureResult = azureFuture.get();
-                        if(azureResult.getReason() == ResultReason.RecognizedSpeech)
-                        {
+                        if (azureResult.getReason() == ResultReason.RecognizedSpeech) {
                             speechOutput.setText(azureResult.getText());
                             Message msg = Message.obtain();
                             msg.what = WRITE_TO_FILE;
@@ -106,13 +103,11 @@ public class MainActivity extends AppCompatActivity {
                             returnMsgHandler.sendMessage(msg);
 
                         }
-                        else if(azureResult.getReason() == ResultReason.NoMatch)
-                        {
+                        else if (azureResult.getReason() == ResultReason.NoMatch) {
                             String noMatchMessage = "No Speech Recognized";
                             Toast.makeText(getApplicationContext(), noMatchMessage, Toast.LENGTH_SHORT).show();
                         }
-                        else if(azureResult.getReason() == ResultReason.Canceled)
-                        {
+                        else if (azureResult.getReason() == ResultReason.Canceled) {
                             CancellationDetails cancelDetails = CancellationDetails.fromResult(azureResult);
 
                             Log.w(TAG, String.valueOf(cancelDetails.getReason()));
@@ -123,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
 
 
                 }
-                else{
+                else {
                     Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                     intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                             RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -168,12 +163,10 @@ public class MainActivity extends AppCompatActivity {
 
         switch (requestCode){
             case VOICE_RECOGNITION_CODE: {
-                if(resultCode == Activity.RESULT_OK && data != null)
-                {
+                if (resultCode == Activity.RESULT_OK && data != null) {
                     ArrayList<String> result = data.getStringArrayListExtra(
                             RecognizerIntent.EXTRA_RESULTS);
-                    if(result.size() == 0 )
-                    {
+                    if (result.size() == 0 ) {
                         RuntimeException e = new RuntimeException();
                         throw e;
                     }
@@ -194,10 +187,8 @@ public class MainActivity extends AppCompatActivity {
 
     Handler returnMsgHandler = new Handler(new Handler.Callback() {
         public boolean handleMessage(Message msg) {
-            if(msg.what == WRITE_TO_FILE)
-            {
-                if(saveSwitch.isChecked())
-                {
+            if (msg.what == WRITE_TO_FILE) {
+                if (saveSwitch.isChecked()) {
                     try {
                         File resultsFile = File.createTempFile(FILE_PREFIX, FILE_SUFFIX, getExternalFilesDir(null));
                         FileOutputStream outputStream = new FileOutputStream(resultsFile, true);
