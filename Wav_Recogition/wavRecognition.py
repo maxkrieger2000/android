@@ -55,7 +55,7 @@ def main():
             match.append(False)
             continue
         formatted_result = re.sub(r"[^\w\s]" , "", result.text)
-        formatted_result.upper()
+        formatted_result = formatted_result.upper()
         results.append(formatted_result)
         match.append(formatted_result == actual[i])
         print("finished")
