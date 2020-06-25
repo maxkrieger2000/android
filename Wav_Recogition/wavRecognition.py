@@ -30,12 +30,8 @@ def main():
     speech_config = speechsdk.SpeechConfig(
         host=service_host)
 
-    i=0
-    random_num = 2
-    
+
     for match in regex_matches:
-        if i >= random_num:
-            break
         if not os.path.isfile(wav_folder + "/" + match.group(wav_file_name) + ".wav"):
             results.append("file not found")
             comparison.append(False)
@@ -61,7 +57,6 @@ def main():
         results.append(formatted_result)
         comparison.append(formatted_result == match.group(actual))
         print("finished")
-        i = i+1
     write_to_csv(regex_matches, results, comparison)
 
 
