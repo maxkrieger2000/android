@@ -8,58 +8,61 @@ service_host = "ws://localhost:5000"
 wav_folder = "wav_files"
 transcription_file = "transcriptions.txt"
 write_file = "recognition_data.csv"
+wav_file_name = 2
+actual = 1
 
 
 def main():
-    if (not os.path.isdir(wav_folder)):
-        return
-    if (not os.path.isfile(transcription_file)):
-        return
-    if (not os.path.isfile(write_file)):
-        return
+    assert os.path.isdir(wav_folder),"folder named 'wav_files' not found"
+    assert os.path.isfile(transcription_file),"transcription file named 'transcriptions.txt' not found"
+    assert os.path.isfile(write_file),"output file named 'recognition_data.csv' not found"
 
+    regex_matches = []
+    regex = re.compile(r"(.+) \((.+)\)")
     transcript = open(transcription_file)
-    transcript_string = transcript.read()
+    for line in transcript:
+        m = regex.match(line)
+        regex_matches.append(m)
     transcript.close()
-    file_names = re.findall(r"(?<=\().*(?=\))", transcript_string)
-    actual = re.findall(r".+?(?=\ \()", transcript_string)
-    
     results = []
-    match = []
+    comparison = []
 
     speech_config = speechsdk.SpeechConfig(
         host=service_host)
 
-    print(file_names)
-    print(actual)
+    i=0
+    random_num = 2
     
-    for i in range(len(file_names)):
-        if not os.path.isfile(wav_folder + "/" + file_names[i] + ".wav"):
+    for match in regex_matches:
+        if i >= random_num:
+            break
+        if not os.path.isfile(wav_folder + "/" + match.group(wav_file_name) + ".wav"):
             results.append("file not found")
-            match.append(False)
+            comparison.append(False)
             continue
         
         #run speech recognition
-        result = speech_from_file(wav_folder + "/" + file_names[i] + ".wav", speech_config)
+        result = speech_from_file(wav_folder + "/" + match.group(wav_file_name) + ".wav", speech_config)
 
         if result.reason == speechsdk.ResultReason.NoMatch:
             results.append("no match")
-            match.append(False)
+            comparison.append(False)
             continue
         elif result.reason == speechsdk.ResultReason.Canceled:
             results.append("recognition cancelled")
-            match.append(False)
+            comparison.append(False)
             continue
         elif (not result.reason == speechsdk.ResultReason.RecognizedSpeech):
             results.append("recognition error")
-            match.append(False)
+            comparison.append(False)
             continue
         formatted_result = re.sub(r"[^\w\s]" , "", result.text)
         formatted_result = formatted_result.upper()
         results.append(formatted_result)
-        match.append(formatted_result == actual[i])
+        comparison.append(formatted_result == match.group(actual))
         print("finished")
-    write_to_csv(file_names, actual, results, match)
+        i = i+1
+    write_to_csv(regex_matches, results, comparison)
 
 
 def speech_from_file(file_name, speech_config):
@@ -70,12 +73,11 @@ def speech_from_file(file_name, speech_config):
     return result
 
 
-def write_to_csv(file_names, actual, results, match):
+def write_to_csv(regex_matches, results, comparison):
     with open(write_file, mode='w') as recognition_data:
         recognition_writer = csv.writer(recognition_data, delimiter=',')
-
-        for i in range(len(results)):
-            recognition_writer.writerow([file_names[i], actual[i], results[i], match[i]])
+        for m, r, c in zip(regex_matches, results, comparison):
+            recognition_writer.writerow([m.group(wav_file_name), m.group(actual), r, c])
     
     
 if __name__ == "__main__":
