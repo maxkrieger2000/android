@@ -61,6 +61,7 @@ def main():
         total_words = len(match.group(actual).split())
         comparison.append(string_comparison(formatted_result, match.group(actual)))
         print("finished")
+        
     write_to_csv(regex_matches, results, comparison)
 
 
@@ -80,24 +81,35 @@ def write_to_csv(regex_matches, results, comparison):
 
 
 def string_comparison(result, actual):
-    #change 
     wrong_count = 0
 
     actual_formatted = " " + actual + " "
     for word in actual.split():
         if word in numdict.keys():
             actual_formatted = actual_formatted.replace(" " + word + " ", " " + numdict[word] + " ")
-    
-    actual_formatted = re.sub(r"[^\w]" , "", actual_formatted)
-    result_formatted = re.sub(r"[^\w]" , "", result)
-    for diff in difflib.ndiff(result_formatted, actual_formatted):
-        if (diff[0] == ' '):
-            continue
-        elif (diff[0] == '-' or diff[0] == '+'):
-            wrong_count += 1
-    return wrong_count
-            
-    
-    
+    if (re.sub(r"[^\w]" , "", actual_formatted) == re.sub(r"[^\w]" , "", result)):
+        return 0 #strings are the same
+
+    result_words = result.split()
+    for word in actual_formatted.split():
+        if (len(word) > 1):
+            if word in result_words:
+                result_words.remove(word)
+            else:
+                wrong_count += 1
+
+    result_words = " ".join(result_words)
+    for character in actual_formatted.split():
+        if (len(character) == 1):
+            if(result_words == result_words.replace(character, "", 1)):
+                wrong_count += 1
+            result_words = result_words.replace(character, "", 1)
+    result_formatted = re.sub(r"[^\w]" , "", result_words)
+
+    print(wrong_count)
+    print(result_formatted)
+    return wrong_count + len(result_formatted)
+
+
 if __name__ == "__main__":
     main()
