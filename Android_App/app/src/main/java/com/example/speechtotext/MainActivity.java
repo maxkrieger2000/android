@@ -2,6 +2,7 @@ package com.example.speechtotext;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.os.HandlerCompat;
 
 import android.Manifest;
 import android.app.Activity;
@@ -10,6 +11,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.speech.RecognizerIntent;
 import android.util.Log;
@@ -32,7 +34,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class MainActivity extends AppCompatActivity {
@@ -45,9 +51,12 @@ public class MainActivity extends AppCompatActivity {
     private TextView speechOutput;
     private Switch saveSwitch;
     private static final int WRITE_TO_FILE = 1;
+    private static final int AZURE_RESULT = 2;
     private static final int VOICE_RECOGNITION_CODE = 100;
     private static final URI SERVICE_HOST = URI.create("ws://localhost:5000");
 
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    Handler mainThreadHandler = HandlerCompat.createAsync(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,51 +79,58 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onClick(View v) {
+                speechOutput.setText("");
+                speechOutput.setHint("Speech Output");
                 if (azureSwitch.isChecked()) {
-                    //run speech to text through azure service
-                    SpeechConfig configSpeech = SpeechConfig.fromHost(SERVICE_HOST);
-                    SpeechRecognizer azureRecognizer = new SpeechRecognizer(configSpeech);
-                    Future<SpeechRecognitionResult> azureFuture = azureRecognizer.recognizeOnceAsync();
 
-                    //String waitMessage = "Please wait for the speech to be processed";
-                    //Toast.makeText(
-                    //        getBaseContext(), waitMessage, Toast.LENGTH_SHORT).show();
+                    executorService.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            //run speech to text through azure service
+                            SpeechConfig configSpeech = SpeechConfig.fromHost(SERVICE_HOST);
+                            SpeechRecognizer azureRecognizer = new SpeechRecognizer(configSpeech);
+                            Future<SpeechRecognitionResult> azureFuture = azureRecognizer.recognizeOnceAsync();
+                            SpeechRecognitionResult azureResult;
+                            try {
+                                azureResult = azureFuture.get();
+                                if (azureResult.getReason() == ResultReason.RecognizedSpeech) {
+
+                                    Log.w(TAG, azureResult.getText());
+
+                                    Message msg = Message.obtain();
+                                    msg.what = WRITE_TO_FILE;
+                                    msg.obj = azureResult.getText();
+                                    returnMsgHandler.sendMessage(msg);
+
+                                    Message msg2 = Message.obtain();
+                                    msg2.what = AZURE_RESULT;
+                                    msg2.obj = azureResult.getText();
+                                    returnMsgHandler.sendMessage(msg2);
 
 
-                    Handler handler = new Handler();
-                    while(!azureFuture.isDone()) {
-                        handler.postDelayed(new Runnable() {
-                            public void run() {
-                                //String waitMessage = "Please wait for the speech to be processed";
-                                //Toast.makeText(
-                                //        getApplicationContext(), waitMessage, Toast.LENGTH_SHORT).show();
+                                }
+                                else if (azureResult.getReason() == ResultReason.NoMatch) {
+                                    mainThreadHandler.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            String noMatchMessage = "No Speech Recognized";
+                                            Toast.makeText(getApplicationContext(), noMatchMessage, Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+
+                                }
+                                else if (azureResult.getReason() == ResultReason.Canceled) {
+                                    CancellationDetails cancelDetails = CancellationDetails.fromResult(azureResult);
+
+                                    Log.w(TAG, String.valueOf(cancelDetails.getReason()));
+                                }
+                            } catch (ExecutionException | InterruptedException e) {
+                                Log.w(TAG, e);
                             }
-                        }, 2000);
-                    }
 
-                    SpeechRecognitionResult azureResult;
-                    try {
-                        azureResult = azureFuture.get();
-                        if (azureResult.getReason() == ResultReason.RecognizedSpeech) {
-                            speechOutput.setText(azureResult.getText());
-                            Message msg = Message.obtain();
-                            msg.what = WRITE_TO_FILE;
-                            msg.obj = azureResult.getText();
-                            returnMsgHandler.sendMessage(msg);
 
                         }
-                        else if (azureResult.getReason() == ResultReason.NoMatch) {
-                            String noMatchMessage = "No Speech Recognized";
-                            Toast.makeText(getApplicationContext(), noMatchMessage, Toast.LENGTH_SHORT).show();
-                        }
-                        else if (azureResult.getReason() == ResultReason.Canceled) {
-                            CancellationDetails cancelDetails = CancellationDetails.fromResult(azureResult);
-
-                            Log.w(TAG, String.valueOf(cancelDetails.getReason()));
-                        }
-                    } catch (ExecutionException | InterruptedException e) {
-                        Log.w(TAG, e);
-                    }
+                    });
 
 
                 }
@@ -202,6 +218,9 @@ public class MainActivity extends AppCompatActivity {
 
 
                 }
+            }
+            else if (msg.what == AZURE_RESULT) {
+                speechOutput.setText(msg.obj.toString());
             }
             return false;
         }
