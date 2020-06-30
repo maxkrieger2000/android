@@ -98,14 +98,9 @@ public class MainActivity extends AppCompatActivity {
                                     Log.w(TAG, azureResult.getText());
 
                                     Message msg = Message.obtain();
-                                    msg.what = WRITE_TO_FILE;
+                                    msg.what = AZURE_RESULT;
                                     msg.obj = azureResult.getText();
                                     returnMsgHandler.sendMessage(msg);
-
-                                    Message msg2 = Message.obtain();
-                                    msg2.what = AZURE_RESULT;
-                                    msg2.obj = azureResult.getText();
-                                    returnMsgHandler.sendMessage(msg2);
 
 
                                 }
@@ -203,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
 
     Handler returnMsgHandler = new Handler(new Handler.Callback() {
         public boolean handleMessage(Message msg) {
-            if (msg.what == WRITE_TO_FILE) {
+            if (msg.what == WRITE_TO_FILE || msg.what == AZURE_RESULT) {
                 if (saveSwitch.isChecked()) {
                     try {
                         File resultsFile = File.createTempFile(FILE_PREFIX, FILE_SUFFIX, getExternalFilesDir(null));
@@ -219,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
 
                 }
             }
-            else if (msg.what == AZURE_RESULT) {
+            if (msg.what == AZURE_RESULT) {
                 speechOutput.setText(msg.obj.toString());
             }
             return false;
