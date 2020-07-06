@@ -28,11 +28,17 @@ import com.microsoft.cognitiveservices.speech.SpeechRecognitionResult;
 import com.microsoft.cognitiveservices.speech.SpeechRecognizer;
 
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -50,10 +56,13 @@ public class MainActivity extends AppCompatActivity {
     private Switch azureSwitch;
     private TextView speechOutput;
     private Switch saveSwitch;
+    private TextView nextInput;
     private static final int WRITE_TO_FILE = 1;
     private static final int AZURE_RESULT = 2;
     private static final int VOICE_RECOGNITION_CODE = 100;
     private static final URI SERVICE_HOST = URI.create("ws://localhost:5000");
+    private List<List<String>> transcript = new ArrayList<List<String>>();
+    private int transcriptIndex = 0;
 
     ExecutorService executorService = Executors.newFixedThreadPool(2);
     Handler mainThreadHandler = HandlerCompat.createAsync(Looper.getMainLooper());
@@ -67,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
         speechOutput = (TextView) findViewById(R.id.textOutput);
         saveSwitch = (Switch) findViewById(R.id.saveTextSwitch);
         azureSwitch = (Switch) findViewById(R.id.azureSwitch);
+        nextInput = (TextView) findViewById(R.id.nextTruth);
 
         String initialButtonText = "Click and Start Talking";
         recordButton.setText(initialButtonText);//
@@ -74,6 +84,36 @@ public class MainActivity extends AppCompatActivity {
         if(!isRecordPermissionGranted()) {
             requestRecordPermission();
         }
+
+        try {
+            //read csv and get ground truths into array
+            File dir = new File(getExternalFilesDir(null).getAbsolutePath());
+            File read = new File(dir, "transcript.csv");
+            BufferedReader br = new BufferedReader(new FileReader(read));
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] lineWords = line.split(",");
+                List<String> rowList = Arrays.asList(lineWords);
+                transcript.add(rowList);
+            }
+            br.close();
+        } catch (IOException e) {
+            Log.w(TAG, e);
+        }
+
+        File outputDir = new File(getExternalFilesDir(null).getAbsolutePath());
+        File outputFile = new File(outputDir, "results.csv");
+        try {
+            FileOutputStream Fos = new FileOutputStream(outputFile, false);
+            Fos.write("Number,Transcript,Result".getBytes());
+            Fos.flush();
+            Fos.close();
+        } catch (IOException e) {
+            Log.w(TAG, e);
+        }
+
+        nextInput.setText(transcript.get(0).get(1));
+
 
         recordButton.setOnClickListener(new View.OnClickListener() {
 
@@ -206,6 +246,27 @@ public class MainActivity extends AppCompatActivity {
                         outputStream.write(msg.obj.toString().getBytes());
                         outputStream.flush();
                         outputStream.close();
+
+                        //write result to csv with transcript val
+                        //display next transcript truth
+                        if (transcriptIndex < transcript.size()) {
+
+                            File outputD = new File(getExternalFilesDir(null).getAbsolutePath());
+                            File outputF = new File(outputD, "results.csv");
+                            FileOutputStream Fos = new FileOutputStream(outputF, true);
+                            String writeToResults = "\n" + Integer.toString(transcriptIndex + 1) + "," +
+                                    transcript.get(transcriptIndex).get(1) + "," + msg.obj.toString();
+                            Fos.write(writeToResults.getBytes());
+                            transcriptIndex++;
+                            Log.w(TAG, "HERE");
+                            if (transcriptIndex >= transcript.size()) {
+                                nextInput.setText("All transcriptions read");
+                            } else {
+                                nextInput.setText(transcript.get(transcriptIndex).get(1));
+                            }
+                            Fos.flush();
+                            Fos.close();
+                        }
 
                     } catch (IOException e) {
                         Log.w(TAG, e);
