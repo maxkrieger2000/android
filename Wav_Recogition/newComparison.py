@@ -24,12 +24,14 @@ def main():
     for truth, result, in zip(truths, results):
 
         truth_formatted = truth.split()
-        for word in enumerate(truth_formatted):
-            if word[1] in numdict.keys():
-                truth_formatted[word[0]] = numdict[word[1]]
+        for i in range(len(truth_formatted)):
+            if truth_formatted[i] in numdict.keys():
+                truth_formatted[i] = numdict[truth_formatted[i]]
         truth_formatted = " ".join(truth_formatted)
                 
         truth_len = len(re.sub(r"[^\w]" , "", truth_formatted))
+        #re.sub used to remove whitespace from the calculation of length
+        #   of the string
         
         new_comp.append(string_comparison(truth_formatted, result) / truth_len)
         difflib_comp.append(difflib_comparison(truth_formatted, result) / truth_len)
