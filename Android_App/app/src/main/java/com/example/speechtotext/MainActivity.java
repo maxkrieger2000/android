@@ -105,7 +105,8 @@ public class MainActivity extends AppCompatActivity {
         File outputFile = new File(outputDir, "results.csv");
         try {
             FileOutputStream Fos = new FileOutputStream(outputFile, false);
-            Fos.write("Number,Transcript,Result".getBytes());
+            PrintStream pStream = new PrintStream(Fos);
+            pStream.println("Number,Transcript,Result");
             Fos.flush();
             Fos.close();
         } catch (IOException e) {
@@ -255,13 +256,14 @@ public class MainActivity extends AppCompatActivity {
                             File outputF = new File(outputD, "results.csv");
                             FileOutputStream Fos = new FileOutputStream(outputF, true);
                             PrintStream pStream = new PrintStream(Fos);
-                            String writeToResults = "\n" + transcript.get(transcriptIndex)[0] + "," +
+                            String writeToResults = transcript.get(transcriptIndex)[0] + "," +
                                     transcript.get(transcriptIndex)[1] + "," + msg.obj.toString();
-                            pStream.print(writeToResults);
                             transcriptIndex++;
                             if (transcriptIndex >= transcript.size()) {
+                                pStream.print(writeToResults);
                                 nextInput.setText("All transcriptions read");
                             } else {
+                                pStream.println(writeToResults);
                                 nextInput.setText(transcript.get(transcriptIndex)[1]);
                             }
                             Fos.flush();
