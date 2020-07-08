@@ -35,6 +35,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int AZURE_RESULT = 2;
     private static final int VOICE_RECOGNITION_CODE = 100;
     private static final URI SERVICE_HOST = URI.create("ws://localhost:5000");
-    private List<List<String>> transcript = new ArrayList<List<String>>();
+    private List<String[]> transcript = new ArrayList<String[]>();
     private int transcriptIndex = 0;
 
     ExecutorService executorService = Executors.newFixedThreadPool(2);
@@ -93,8 +94,7 @@ public class MainActivity extends AppCompatActivity {
             String line;
             while ((line = br.readLine()) != null) {
                 String[] lineWords = line.split(",");
-                List<String> rowList = Arrays.asList(lineWords);
-                transcript.add(rowList);
+                transcript.add(lineWords);
             }
             br.close();
         } catch (IOException e) {
@@ -112,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
             Log.w(TAG, e);
         }
 
-        nextInput.setText(transcript.get(0).get(1));
+        nextInput.setText(transcript.get(0)[1]);
 
 
         recordButton.setOnClickListener(new View.OnClickListener() {
@@ -254,15 +254,15 @@ public class MainActivity extends AppCompatActivity {
                             File outputD = new File(getExternalFilesDir(null).getAbsolutePath());
                             File outputF = new File(outputD, "results.csv");
                             FileOutputStream Fos = new FileOutputStream(outputF, true);
-                            String writeToResults = "\n" + Integer.toString(transcriptIndex + 1) + "," +
-                                    transcript.get(transcriptIndex).get(1) + "," + msg.obj.toString();
-                            Fos.write(writeToResults.getBytes());
+                            PrintStream pStream = new PrintStream(Fos);
+                            String writeToResults = "\n" + transcript.get(transcriptIndex)[0] + "," +
+                                    transcript.get(transcriptIndex)[1] + "," + msg.obj.toString();
+                            pStream.print(writeToResults);
                             transcriptIndex++;
-                            Log.w(TAG, "HERE");
                             if (transcriptIndex >= transcript.size()) {
                                 nextInput.setText("All transcriptions read");
                             } else {
-                                nextInput.setText(transcript.get(transcriptIndex).get(1));
+                                nextInput.setText(transcript.get(transcriptIndex)[1]);
                             }
                             Fos.flush();
                             Fos.close();
